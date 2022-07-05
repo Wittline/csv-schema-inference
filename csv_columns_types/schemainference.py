@@ -202,11 +202,13 @@ class CsvSchemaInference:
                 records = random.sample(map.read()
                                     .splitlines()[0:portion],
                                     portion)
-
+                                    
                 prl = Parallel()
                 dtype = DetectType(self.max_length, self.sep)
+
                 schemas = prl.parallel(records = records, arr_obj=[dtype], d_schema = self.schema, chunk_size = None)
 
-                print(self.dataframe)
+                for schema in schemas:
+                    print(schema)
 
  
