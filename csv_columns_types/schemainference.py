@@ -133,7 +133,7 @@ class Parallel:
             d_schema = arr_obj[i].execute(records, d_schema)
         
         return d_schema
-                
+
 
         
     def parallel(self, records, arr_obj,  d_schema, chunk_size = None):
@@ -147,8 +147,11 @@ class Parallel:
         results = [pool.apply_async(self.execute, args=(records[x:x+chunk_size], x, arr_obj, d_schema)) for x in range(0, len(records), chunk_size)]
         pool.close()
         pool.join()
-                                                                                                        
 
+        outputs = [p.get() for p in results]
+
+        return outputs
+        
 
 
 class CsvSchemaInference:
@@ -174,7 +177,6 @@ class CsvSchemaInference:
                 },
                 "nullable":False         
             }
-
 
 
     def __estimate_count(self, filename, reader):
