@@ -6,63 +6,12 @@ import datetime as dt
 
 
 
+class DetectType:
 
-class Parallel:
-
-    def __init__(self):
-        pass
-
-    
-    def execute(self, records, x, arr_obj):
-
-        for i in range(0, len(arr_obj)):
-            records_types = arr_obj[i].execute(records)
-        
-        return records_types
-
-
-        
-    def parallel(self, records, arr_obj,  chunk_size = None):
-        
-        cpus = (mp.cpu_count() - 1)
-        if chunk_size is None:
-            chunk_size = len(records) // cpus                
-
-        pool = mp.Pool(processes=cpus)
-        
-        results = [pool.apply_async(self.execute, args=(records[x:x+self.chunk_size], x, arr_obj)) for x in range(0, len(records), self.chunk_size)]
-        pool.close()
-        pool.join()
-        
-        outputs = [p.get() for p in results]
-
-        output = []
-
-        for _out in outputs:
-            output += _out
-
-        return output
-
-    
-
-class CsvSchemaInference:
-    
-    def __init__(self, percent, max_length = 100, column_accuracy = 0.8, null_values = [], seed= 0.01, header= True, sep=";"):
-        self.percent = percent
-        self.seed = seed
-        self.header = header
-        self.sep = sep
-        self.dataframe = {}
-        self.column_accuracy = column_accuracy
+    def __init__(self, max_length, sep):
         self.max_length = max_length
-        self.boolean_values = {"true", "false", "TRUE", "FALSE", "True", "False"}
-        self.timestamp_length = 21
-
-        if len(null_values) == 0: 
-            self.null_values = {"", 'na', 'NA', 'null', 'NULL'}
-        else:
-            self.null_values = null_values
-
+        self.sep = sep
+    
     def __get_local_type(value):
         try:
             float(value)
@@ -134,13 +83,9 @@ class CsvSchemaInference:
         return "STRING"
 
 
-
-
-
-    def __infer_value_type(self, value, index):
+    def __infer_value_type(self, value, index, schema):        
         
-        
-        if value not in self.dataframe[index]["values_types"].keys():
+        if value not in schema[index]["values"].keys():
             
             local_type = self.__get_local_type(value)
             
@@ -148,63 +93,84 @@ class CsvSchemaInference:
 
                 value = value[0:100]
                 
-                if value in self.null_values:
-                    self.dataframe[index]["nullable"] = True
+                if value in {"", 'na', 'NA', 'null', 'NULL'}:
+                    schema[index]["nullable"] = True
                     _type = 'NULL'
-                elif value in self.boolean_values:
+                elif value in {"true", "false", "TRUE", "FALSE", "True", "False"}:
                     _type = 'BOOLEAN'                        
-                elif len(value) < self.timestamp_length:
+                elif len(value) < 21:
                     _type = self.__get_date_type(value)
                 else:
                     _type = local_type
             else:
                 _type = local_type
             
-
-            self.dataframe[index]["values_types"][value] = { "count": 1,"date_type": _type}
+            schema[index]["values"][value] = { "count": 1,"date_type": _type}
         
         else:
-            self.dataframe[index]["values_types"][value]["count"] += 1
-
-                
-                
+            schema[index]["values"][value]["count"] += 1
             
 
-    def execute(self, records):
-
-        l_header = len(self.dataframe.keys())
-
-        types = ["NULLABLE"] * len(l_header)
-        nullables = [False] * len(l_header)
+    def execute(self, records, schema):
 
         for record in records:
-
             values = record.rstrip().split(self.sep)
-
             for index, value in enumerate(values):
-                _type = self.__infer_value_type(value[0:self.max_length], index)
-                nullables[index] = nullables[index] or _type == "NULLABLE"
-                types[index] = _decide_type(types[index], _type)
-        types = [t if t != 'NULLABLE' else 'STRING' for t in types]
-        return json.dumps([
-            {"name": h, "type": t, "nullable": n}
-            for h, t, n in zip(headers, types, nullables)
-        ], indent=2)
+                self.__infer_value_type(value[0:self.max_length], index, schema)
+        
+        return schema
+
+
+class Parallel:
+
+    def __init__(self):
+        pass
+
+    
+    def execute(self, records, x, arr_obj, d_schema):
+
+        for i in range(0, len(arr_obj)):
+            d_schema = arr_obj[i].execute(records, d_schema)
+        
+        return d_schema
+                
 
         
+    def parallel(self, records, arr_obj,  d_schema, chunk_size = None):
+        
+        cpus = (mp.cpu_count() - 1)
+        if chunk_size is None:
+            chunk_size = len(records) // cpus                
+
+        pool = mp.Pool(processes=cpus)
+        
+        results = [pool.apply_async(self.execute, args=(records[x:x+chunk_size], x, arr_obj, d_schema)) for x in range(0, len(records), chunk_size)]
+        pool.close()
+        pool.join()
+                                                                                                        
+
+
+
+class CsvSchemaInference:
+    
+    def __init__(self, percent, max_length = 100, column_accuracy = 0.8, seed= 0.01, header= True, sep=";"):
+        self.percent = percent
+        self.seed = seed
+        self.header = header
+        self.sep = sep
+        self.schema = {}
+        self.column_accuracy = column_accuracy
+        self.max_length = max_length        
+        
+  
 
     def __set_header(self, header):
-
-        header = header.rstrip().split(self.sep)
-
+        
+        header = str(header).rstrip().split(self.sep)
         for i in range(0, len(header)):
-            self.dataframe[i] = {
+            self.schema[i] = {
                 "column_name": header[i],
-                "values_types":{
-                    "NULL":{
-                        "date_type": "NULL",
-                        "count": 0
-                    }
+                "values":{
                 },
                 "nullable":False         
             }
@@ -235,5 +201,10 @@ class CsvSchemaInference:
                                     .splitlines()[0:portion],
                                     portion)
 
-                types = Parallel.parallel(records, [self.execute], chunk_size = None)
+                prl = Parallel()
+                dtype = DetectType(self.max_length, self.sep)
+                schemas = prl.parallel(records = records, arr_obj=[dtype], d_schema = self.schema, chunk_size = None)
 
+                print(self.dataframe)
+
+ 
