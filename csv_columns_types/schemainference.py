@@ -3,6 +3,8 @@ import os
 import random
 import multiprocessing as mp
 import datetime as dt
+import time
+import timeit as tiempo
 
 
 
@@ -12,7 +14,7 @@ class DetectType:
         self.max_length = max_length
         self.sep = sep
     
-    def __get_local_type(value):
+    def __get_local_type(self, value):
         try:
             float(value)
         except ValueError:
@@ -90,14 +92,12 @@ class DetectType:
             local_type = self.__get_local_type(value)
             
             if local_type == 'STRING':
-
-                value = value[0:100]
                 
-                if value in {"", 'na', 'NA', 'null', 'NULL'}:
+                if value in {"", "na", "NA", "null", "NULL"}:
                     schema[index]["nullable"] = True
-                    _type = 'NULL'
+                    _type = "NULL"                    
                 elif value in {"true", "false", "TRUE", "FALSE", "True", "False"}:
-                    _type = 'BOOLEAN'                        
+                    _type = "BOOLEAN"                
                 elif len(value) < 21:
                     _type = self.__get_date_type(value)
                 else:
@@ -114,7 +114,7 @@ class DetectType:
     def execute(self, records, schema):
 
         for record in records:
-            values = record.rstrip().split(self.sep)
+            values = record.rstrip().split(self.sep)            
             for index, value in enumerate(values):
                 self.__infer_value_type(value[0:self.max_length], index, schema)
         
@@ -147,6 +147,7 @@ class Parallel:
         results = [pool.apply_async(self.execute, args=(records[x:x+chunk_size], x, arr_obj, d_schema)) for x in range(0, len(records), chunk_size)]
         pool.close()
         pool.join()
+
 
         outputs = [p.get() for p in results]
 
@@ -200,6 +201,7 @@ class CsvSchemaInference:
                 random.seed(self.seed)
 
                 records = random.sample(map.read()
+                                    .decode("utf-8")
                                     .splitlines()[0:portion],
                                     portion)
                                     
@@ -208,7 +210,23 @@ class CsvSchemaInference:
 
                 schemas = prl.parallel(records = records, arr_obj=[dtype], d_schema = self.schema, chunk_size = None)
 
-                for schema in schemas:
-                    print(schema)
+                print(len(schemas))
+
+                print(schemas)
+
+                # for schema in schemas:
+                #     print(schema)
+
+
+
+if __name__ == '__main__':
+
+
+    inf = CsvSchemaInference(percent = 0.8, max_length=100, column_accuracy = 0.7, seed=2, header=True, sep=",")
+
+    inicio = tiempo.default_timer()
+    inf.infer(r"C:\\Users\\ramse\\Documents\\data.csv")
+    fin = tiempo.default_timer()
+    print("counting time: " + format(fin-inicio, '.8f'))                
 
  
