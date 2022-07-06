@@ -306,10 +306,7 @@ class CsvSchemaInference:
 
 
 
-
-
-
-    def run(self, filename):
+    def run_inference(self, filename):
 
         with open(filename, mode="r", encoding="utf8") as file_obj:
 
