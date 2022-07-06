@@ -170,7 +170,7 @@ class CsvSchemaInference:
 
     def __set_header(self, header):
         
-        header = str(header).rstrip().split(self.sep)
+        header = header.rstrip().split(self.sep)
         for i in range(0, len(header)):
             self.schema[i] = {
                 "column_name": header[i],
@@ -196,14 +196,14 @@ class CsvSchemaInference:
                 portion = int(no_lines * self.percent)
                 map.seek(0)
 
-                self.__set_header(map.readline())
+                self.__set_header(map.readline().decode("utf-8"))
 
                 random.seed(self.seed)
 
                 records = random.sample(map.read()
                                     .decode("utf-8")
-                                    .splitlines()[0:portion],
-                                    portion)
+                                    .splitlines(),
+                                    portion)                            
                                     
                 prl = Parallel()
                 dtype = DetectType(self.max_length, self.sep)
@@ -211,11 +211,6 @@ class CsvSchemaInference:
                 schemas = prl.parallel(records = records, arr_obj=[dtype], d_schema = self.schema, chunk_size = None)
 
                 print(len(schemas))
-
-                print(schemas)
-
-                # for schema in schemas:
-                #     print(schema)
 
 
 
