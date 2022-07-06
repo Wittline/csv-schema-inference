@@ -341,21 +341,3 @@ class CsvSchemaInference:
                 self.__build_schema(schemas)           
 
                 return self.__approximate_types()
-
-
-if __name__ == '__main__':
-
-
-    inf = CsvSchemaInference(portion = 0.8, max_length=100, seed=2, header=True, sep=",")
-
-    inicio = tiempo.default_timer()
-    aprox_schema= inf.run(r"C:\\Users\\ramse\\Documents\\data.csv")
-
-    #inf.pretty(aprox_schema)
-
-    inf.pretty(inf.explore_schema_column(column = 'cont_10'))
-
-    fin = tiempo.default_timer()
-    print("counting time: " + format(fin-inicio, '.8f'))    
-
- 
