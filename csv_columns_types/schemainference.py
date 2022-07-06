@@ -3,8 +3,8 @@ import os
 import random
 import multiprocessing as mp
 import datetime as dt
-import time
 import timeit as tiempo
+import operator
 
 
 
@@ -95,7 +95,7 @@ class DetectType:
                 
                 if value in {"", "na", "NA", "null", "NULL"}:
                     schema[index]["nullable"] = True
-                    _type = "NULL"                    
+                    _type = "STRING"
                 elif value in {"true", "false", "TRUE", "FALSE", "True", "False"}:
                     _type = "BOOLEAN"                
                 elif len(value) < 21:
@@ -207,18 +207,45 @@ class CsvSchemaInference:
 
     
 
-    def approximate_types(self, schema, columns, accuracy = 0.5):
 
+    def approximate_columns_types(self, schema, acc = 0.6):
 
-        for column in columns:
+        result = {}        
+        for c in schema:
+            _types = {}
+            t = 0
+            for v in schema[c]['values']:
+                value = schema[c]['values'][v]
+                t += value['cnt']
+                if value['_type'] not in _types:
+                    _types[value['_type']] = value['cnt']
+                else:
+                    _types[value['_type']] += value['cnt']
+
+            for ft in _types:
+                p = (_types[ft] * 100) / t
+                _types[ft] = p
+            
+
+            try:
+                _type = max({k: v for k, v in _types.items() if v >= (acc * 100)}.items(), 
+                            key=operator.itemgetter(1))[0]
+            except ValueError:
+                _type = "STRING"               
             
 
 
-
+            result[c] = {
+                "name": schema[c]['_name'], 
+                "type": _type,
+                "nullable": schema[c]['nullable']
+                }
         
-            
+        return result      
 
-    def infer(self, filename):
+
+
+    def run(self, filename):
 
         with open(filename, mode="r", encoding="utf8") as file_obj:
 
@@ -248,8 +275,8 @@ class CsvSchemaInference:
 
                 
                 self.__build_schema(schemas)
-                
-                return self.schema
+
+                print(self.approximate_columns_types(self.schema,0.5))
 
 
 if __name__ == '__main__':
@@ -258,7 +285,7 @@ if __name__ == '__main__':
     inf = CsvSchemaInference(percent = 0.8, max_length=100, seed=2, header=True, sep=",")
 
     inicio = tiempo.default_timer()
-    inf.infer(r"C:\\Users\\ramse\\Documents\\data.csv")
+    inf.run(r"C:\\Users\\ramse\\Documents\\data.csv")
     fin = tiempo.default_timer()
     print("counting time: " + format(fin-inicio, '.8f'))                
 
