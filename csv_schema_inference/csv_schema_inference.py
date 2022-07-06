@@ -153,8 +153,8 @@ class Parallel:
 
 class CsvSchemaInference:
     
-    def __init__(self, percent, max_length = 100, seed= 0.01, header= True, sep=";"):
-        self.percent = percent
+    def __init__(self, portion, max_length = 100, seed= 0.01, header= True, sep=";"):
+        self.portion = portion
         self.seed = seed
         self.header = header
         self.sep = sep
@@ -208,14 +208,14 @@ class CsvSchemaInference:
     
 
 
-    def __approximate_types(self, schema, acc = 0.5):
+    def __approximate_types(self, acc = 0.5):
 
         result = {}        
-        for c in schema:
+        for c in self.schema:
             _types = {}
             t = 0
-            for v in schema[c]['values']:
-                value = schema[c]['values'][v]
+            for v in self.schema[c]['values']:
+                value = self.schema[c]['values'][v]
                 t += value['cnt']
                 if value['_type'] not in _types:
                     _types[value['_type']] = value['cnt']
@@ -231,16 +231,81 @@ class CsvSchemaInference:
                 _type = max({k: v for k, v in _types.items() if v >= (acc * 100)}.items(), 
                             key=operator.itemgetter(1))[0]
             except ValueError:
-                _type = "STRING"            
-            
+                _type = "STRING"
+
+
+            self.schema[c]['approximate_type'] = _type
 
             result[c] = {
-                "name": schema[c]['_name'], 
+                "name": self.schema[c]['_name'], 
                 "type": _type,
-                "nullable": schema[c]['nullable']
+                "nullable": self.schema[c]['nullable']
                 }
         
-        return result      
+        return result
+
+        
+    def pretty(self, d, ind=0):
+
+        for k, v in d.items():
+            print('\t' * ind + str(k))
+            if isinstance(v, dict):
+                self.pretty(v, ind+1)
+            else:
+                print('\t' * (ind+1) + str(v))
+
+
+    def get_schema_columns(self, columns = {}):
+
+        result = {}
+
+        for c in self.schema:
+            if self.schema[c]["_name"] in columns:
+                result[c] = {
+                    "_name": self.schema[c]["_name"],
+                    "values":self.schema[c]["values"],
+                    "nullable":self.schema[c]["nullable"],
+                    "approximate_type":self.schema[c]["approximate_type"]
+                }
+        
+        return result
+
+    
+    def explore_schema_column(self, column):
+        
+        result = {}
+        
+        for c in self.schema:
+
+            if column == self.schema[c]['_name']:
+
+                _types = {}
+                t = 0
+                for v in self.schema[c]['values']:
+                    value = self.schema[c]['values'][v]
+                    t += value['cnt']
+                    if value['_type'] not in _types:
+                        _types[value['_type']] = value['cnt']
+                    else:
+                        _types[value['_type']] += value['cnt']
+
+                for ft in _types:
+                    p = (_types[ft] * 100) / t
+                    _types[ft] = p
+
+                _types
+                result[c] = {
+                    "name" : self.schema[c]['_name'],
+                    "types": _types,
+                    "nullable": self.schema[c]['nullable']
+                }
+                
+                break
+        
+        return result
+
+
+
 
 
 
@@ -251,7 +316,7 @@ class CsvSchemaInference:
             with mmap.mmap(file_obj.fileno(), length=0, access=mmap.ACCESS_READ) as map:
                 
                 no_lines = self.__estimate_count(filename, map)
-                portion = int(no_lines * self.percent)
+                portion = int(no_lines * self.portion)
                 map.seek(0)
 
                 self.__set_header(map.readline().decode("utf-8"))
@@ -273,19 +338,24 @@ class CsvSchemaInference:
                                       chunk_size = None)
 
                 
-                self.__build_schema(schemas)                
+                self.__build_schema(schemas)           
 
-                return self.__approximate_types(self.schema)
+                return self.__approximate_types()
 
 
 if __name__ == '__main__':
 
 
-    inf = CsvSchemaInference(percent = 0.8, max_length=100, seed=2, header=True, sep=",")
+    inf = CsvSchemaInference(portion = 0.8, max_length=100, seed=2, header=True, sep=",")
 
     inicio = tiempo.default_timer()
-    print(inf.run(r"C:\\Users\\ramse\\Documents\\mock_data.csv"))
+    aprox_schema= inf.run(r"C:\\Users\\ramse\\Documents\\data.csv")
+
+    #inf.pretty(aprox_schema)
+
+    inf.pretty(inf.explore_schema_column(column = 'cont_10'))
+
     fin = tiempo.default_timer()
-    print("counting time: " + format(fin-inicio, '.8f'))         
+    print("counting time: " + format(fin-inicio, '.8f'))    
 
  
