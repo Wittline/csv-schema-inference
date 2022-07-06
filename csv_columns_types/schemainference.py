@@ -208,7 +208,7 @@ class CsvSchemaInference:
     
 
 
-    def approximate_columns_types(self, schema, acc = 0.6):
+    def __approximate_types(self, schema, acc = 0.5):
 
         result = {}        
         for c in schema:
@@ -231,9 +231,8 @@ class CsvSchemaInference:
                 _type = max({k: v for k, v in _types.items() if v >= (acc * 100)}.items(), 
                             key=operator.itemgetter(1))[0]
             except ValueError:
-                _type = "STRING"               
+                _type = "STRING"            
             
-
 
             result[c] = {
                 "name": schema[c]['_name'], 
@@ -274,9 +273,9 @@ class CsvSchemaInference:
                                       chunk_size = None)
 
                 
-                self.__build_schema(schemas)
+                self.__build_schema(schemas)                
 
-                print(self.approximate_columns_types(self.schema,0.5))
+                return self.__approximate_types(self.schema)
 
 
 if __name__ == '__main__':
@@ -285,8 +284,8 @@ if __name__ == '__main__':
     inf = CsvSchemaInference(percent = 0.8, max_length=100, seed=2, header=True, sep=",")
 
     inicio = tiempo.default_timer()
-    inf.run(r"C:\\Users\\ramse\\Documents\\data.csv")
+    print(inf.run(r"C:\\Users\\ramse\\Documents\\mock_data.csv"))
     fin = tiempo.default_timer()
-    print("counting time: " + format(fin-inicio, '.8f'))                
+    print("counting time: " + format(fin-inicio, '.8f'))         
 
  
