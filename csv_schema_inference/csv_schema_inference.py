@@ -3,7 +3,6 @@ import os
 import random
 import multiprocessing as mp
 import datetime as dt
-import timeit as tiempo
 import operator
 
 
@@ -153,7 +152,7 @@ class Parallel:
 
 class CsvSchemaInference:
     
-    def __init__(self, portion, max_length = 100, seed= 0.01, header= True, sep=";"):
+    def __init__(self, portion = 0.5, max_length = 100, seed= 0.01, header= True, sep=";"):
         self.portion = portion
         self.seed = seed
         self.header = header
@@ -203,8 +202,6 @@ class CsvSchemaInference:
                                     }
                     else:
                         self.schema[c_inx]['values'][k]['cnt'] += v_dict['values'][k]['cnt']
-
-
     
 
 
@@ -316,7 +313,8 @@ class CsvSchemaInference:
                 portion = int(no_lines * self.portion)
                 map.seek(0)
 
-                self.__set_header(map.readline().decode("utf-8"))
+                if self.header:
+                    self.__set_header(map.readline().decode("utf-8"))                
 
                 random.seed(self.seed)
 
