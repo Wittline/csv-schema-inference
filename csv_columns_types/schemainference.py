@@ -105,10 +105,10 @@ class DetectType:
             else:
                 _type = local_type
             
-            schema[index]["values"][value] = { "count": 1,"date_type": _type}
+            schema[index]["values"][value] = { "cnt": 1,"_type": _type}
         
         else:
-            schema[index]["values"][value]["count"] += 1
+            schema[index]["values"][value]["cnt"] += 1
             
 
     def execute(self, records, schema):
@@ -127,16 +127,12 @@ class Parallel:
         pass
 
     
-    def execute(self, records, x, arr_obj, d_schema):
-
-        for i in range(0, len(arr_obj)):
-            d_schema = arr_obj[i].execute(records, d_schema)
-        
-        return d_schema
+    def execute(self, records, x, obj, d_schema):
+        return obj.execute(records, d_schema)        
 
 
         
-    def parallel(self, records, arr_obj,  d_schema, chunk_size = None):
+    def parallel(self, records, obj,  d_schema, chunk_size = None):
         
         cpus = (mp.cpu_count() - 1)
         if chunk_size is None:
@@ -144,7 +140,7 @@ class Parallel:
 
         pool = mp.Pool(processes=cpus)
         
-        results = [pool.apply_async(self.execute, args=(records[x:x+chunk_size], x, arr_obj, d_schema)) for x in range(0, len(records), chunk_size)]
+        results = [pool.apply_async(self.execute, args=(records[x:x+chunk_size], x, obj, d_schema)) for x in range(0, len(records), chunk_size)]
         pool.close()
         pool.join()
 
@@ -157,13 +153,12 @@ class Parallel:
 
 class CsvSchemaInference:
     
-    def __init__(self, percent, max_length = 100, column_accuracy = 0.8, seed= 0.01, header= True, sep=";"):
+    def __init__(self, percent, max_length = 100, seed= 0.01, header= True, sep=";"):
         self.percent = percent
         self.seed = seed
         self.header = header
         self.sep = sep
         self.schema = {}
-        self.column_accuracy = column_accuracy
         self.max_length = max_length        
         
   
@@ -173,10 +168,11 @@ class CsvSchemaInference:
         header = header.rstrip().split(self.sep)
         for i in range(0, len(header)):
             self.schema[i] = {
-                "column_name": header[i],
+                "_name": header[i],
                 "values":{
                 },
-                "nullable":False         
+                "nullable":False,
+                "approximate_type":""
             }
 
 
@@ -184,6 +180,42 @@ class CsvSchemaInference:
         buffer = reader.read(1<<13)
         file_size = os.path.getsize(filename)
         return file_size // (len(buffer) // buffer.count(b'\n'))
+
+    
+    def __build_schema(self, schemas):
+
+        for c_inx in self.schema:
+
+            for s_inx in range(0, len(schemas)):
+
+                v_dict = schemas[s_inx][c_inx]
+
+                if v_dict['nullable']:
+                    self.schema[c_inx]['nullable'] = True
+
+                for k in v_dict['values']:
+
+                    if k not in self.schema[c_inx]['values']:
+
+                        self.schema[c_inx]['values'][k] = { 
+                                    "cnt": v_dict['values'][k]['cnt'],
+                                    "_type": v_dict['values'][k]['_type']
+                                    }
+                    else:
+                        self.schema[c_inx]['values'][k]['cnt'] += v_dict['values'][k]['cnt']
+
+
+    
+
+    def approximate_types(self, schema, columns, accuracy = 0.5):
+
+
+        for column in columns:
+            
+
+
+
+        
             
 
     def infer(self, filename):
@@ -206,18 +238,24 @@ class CsvSchemaInference:
                                     portion)                            
                                     
                 prl = Parallel()
-                dtype = DetectType(self.max_length, self.sep)
+                dtype = DetectType(self.max_length, 
+                                   self.sep)
 
-                schemas = prl.parallel(records = records, arr_obj=[dtype], d_schema = self.schema, chunk_size = None)
+                schemas = prl.parallel(records = records,
+                                      obj=dtype, 
+                                      d_schema = self.schema, 
+                                      chunk_size = None)
 
-                print(len(schemas))
-
+                
+                self.__build_schema(schemas)
+                
+                return self.schema
 
 
 if __name__ == '__main__':
 
 
-    inf = CsvSchemaInference(percent = 0.8, max_length=100, column_accuracy = 0.7, seed=2, header=True, sep=",")
+    inf = CsvSchemaInference(percent = 0.8, max_length=100, seed=2, header=True, sep=",")
 
     inicio = tiempo.default_timer()
     inf.infer(r"C:\\Users\\ramse\\Documents\\data.csv")
