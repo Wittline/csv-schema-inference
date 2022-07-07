@@ -152,22 +152,22 @@ class Parallel:
 
 class CsvSchemaInference:
     
-    def __init__(self, portion = 0.5, max_length = 100, seed= 0.01, header= True, sep=";"):
+    def __init__(self, portion = 0.5, max_length = 100, seed= 1, header= True, sep=";"):
         self.portion = portion
         self.seed = seed
         self.header = header
         self.sep = sep
-        self.schema = {}
+        self.__schema = {}
         self.max_length = max_length        
         
   
 
     def __set_header(self, header):
-        
+                
         header = header.rstrip().split(self.sep)
         for i in range(0, len(header)):
-            self.schema[i] = {
-                "_name": header[i],
+            self.__schema[i] = {
+                "_name": header[i].replace('"', ''),
                 "values":{
                 },
                 "nullable":False,
@@ -183,36 +183,36 @@ class CsvSchemaInference:
     
     def __build_schema(self, schemas):
 
-        for c_inx in self.schema:
+        for c_inx in self.__schema:
 
             for s_inx in range(0, len(schemas)):
 
                 v_dict = schemas[s_inx][c_inx]
 
                 if v_dict['nullable']:
-                    self.schema[c_inx]['nullable'] = True
+                    self.__schema[c_inx]['nullable'] = True
 
                 for k in v_dict['values']:
 
-                    if k not in self.schema[c_inx]['values']:
+                    if k not in self.__schema[c_inx]['values']:
 
-                        self.schema[c_inx]['values'][k] = { 
+                        self.__schema[c_inx]['values'][k] = { 
                                     "cnt": v_dict['values'][k]['cnt'],
                                     "_type": v_dict['values'][k]['_type']
                                     }
                     else:
-                        self.schema[c_inx]['values'][k]['cnt'] += v_dict['values'][k]['cnt']
+                        self.__schema[c_inx]['values'][k]['cnt'] += v_dict['values'][k]['cnt']
     
 
 
     def __approximate_types(self, acc = 0.5):
 
         result = {}        
-        for c in self.schema:
+        for c in self.__schema:
             _types = {}
             t = 0
-            for v in self.schema[c]['values']:
-                value = self.schema[c]['values'][v]
+            for v in self.__schema[c]['values']:
+                value = self.__schema[c]['values'][v]
                 t += value['cnt']
                 if value['_type'] not in _types:
                     _types[value['_type']] = value['cnt']
@@ -231,12 +231,12 @@ class CsvSchemaInference:
                 _type = "STRING"
 
 
-            self.schema[c]['approximate_type'] = _type
+            self.__schema[c]['approximate_type'] = _type
 
             result[c] = {
-                "name": self.schema[c]['_name'], 
+                "name": self.__schema[c]['_name'], 
                 "type": _type,
-                "nullable": self.schema[c]['nullable']
+                "nullable": self.__schema[c]['nullable']
                 }
         
         return result
@@ -254,15 +254,16 @@ class CsvSchemaInference:
 
     def get_schema_columns(self, columns = {}):
 
+
         result = {}
 
-        for c in self.schema:
-            if self.schema[c]["_name"] in columns:
+        for c in self.__schema:
+            if self.__schema[c]["_name"] in columns:
                 result[c] = {
-                    "_name": self.schema[c]["_name"],
-                    "values":self.schema[c]["values"],
-                    "nullable":self.schema[c]["nullable"],
-                    "approximate_type":self.schema[c]["approximate_type"]
+                    "_name": self.__schema[c]["_name"],
+                    "values":self.__schema[c]["values"],
+                    "nullable":self.__schema[c]["nullable"],
+                    "approximate_type":self.__schema[c]["approximate_type"]
                 }
         
         return result
@@ -272,14 +273,14 @@ class CsvSchemaInference:
         
         result = {}
         
-        for c in self.schema:
+        for c in self.__schema:
 
-            if column == self.schema[c]['_name']:
+            if column == self.__schema[c]['_name']:
 
                 _types = {}
                 t = 0
-                for v in self.schema[c]['values']:
-                    value = self.schema[c]['values'][v]
+                for v in self.__schema[c]['values']:
+                    value = self.__schema[c]['values'][v]
                     t += value['cnt']
                     if value['_type'] not in _types:
                         _types[value['_type']] = value['cnt']
@@ -292,9 +293,9 @@ class CsvSchemaInference:
 
                 _types
                 result[c] = {
-                    "name" : self.schema[c]['_name'],
+                    "name" : self.__schema[c]['_name'],
                     "types": _types,
-                    "nullable": self.schema[c]['nullable']
+                    "nullable": self.__schema[c]['nullable']
                 }
                 
                 break
@@ -329,7 +330,7 @@ class CsvSchemaInference:
 
                 schemas = prl.parallel(records = records,
                                       obj=dtype, 
-                                      d_schema = self.schema, 
+                                      d_schema = self.__schema, 
                                       chunk_size = None)
 
                 
