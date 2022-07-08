@@ -24,9 +24,9 @@ pip install csv-schema-inference
 
     Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/
     Collecting csv-schema-inference
-      Downloading csv_schema_inference-0.0.2-py3-none-any.whl (5.2 kB)
+      Downloading csv_schema_inference-0.0.3-py3-none-any.whl (5.2 kB)
     Installing collected packages: csv-schema-inference
-    Successfully installed csv-schema-inference-0.0.2
+    Successfully installed csv-schema-inference-0.0.3
 
 </div>
 
