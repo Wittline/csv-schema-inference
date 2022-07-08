@@ -336,4 +336,4 @@ class CsvSchemaInference:
                 
                 self.__build_schema(schemas)           
 
-                return self.__approximate_types()
+                return self.__approximate_types()  
