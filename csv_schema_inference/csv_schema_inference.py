@@ -152,11 +152,12 @@ class Parallel:
 
 class CsvSchemaInference:
     
-    def __init__(self, portion = 0.5, max_length = 100, seed= 1, header= True, sep=";"):
+    def __init__(self, portion = 0.5, max_length = 100, acc = 0.7, seed= 1, header= True, sep=";"):
         self.portion = portion
         self.seed = seed
         self.header = header
         self.sep = sep
+        self.accuracy = acc
         self.__schema = {}
         self.max_length = max_length        
         
@@ -333,7 +334,8 @@ class CsvSchemaInference:
                                       d_schema = self.__schema, 
                                       chunk_size = None)
 
-                
+                #Joining schemas results
                 self.__build_schema(schemas)           
 
-                return self.__approximate_types()  
+                #Approximate data types
+                return self.__approximate_types(acc = self.accuracy)
