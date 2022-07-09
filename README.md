@@ -5,9 +5,10 @@ A tool to automatically infer columns data types in .csv files
 
 <p align="center">
   <img 
-    src="https://user-images.githubusercontent.com/8701464/177665684-49ef381a-cd67-4290-aea1-cd62f315a005.png"
+    src="https://user-images.githubusercontent.com/8701464/178112999-a80d984c-5dd7-44a6-bc83-a6eeaa2bf0c5.png"
   >
 </p>
+
 
 
 <div class="cell markdown" id="bDEfBKw0v5Gl">
