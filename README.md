@@ -1,6 +1,8 @@
 # **Csv Schema Inference**
 A tool to automatically infer columns data types in .csv files
 
+### Check the article here:  <a href="https://itnext.io/building-a-schema-inference-data-pipeline-for-large-csv-files-7a45d41ad4df">Building a Schema Inference Data Pipeline for Large CSV filesn</a>
+
 <p align="center">
   <img 
     src="https://user-images.githubusercontent.com/8701464/177665684-49ef381a-cd67-4290-aea1-cd62f315a005.png"
