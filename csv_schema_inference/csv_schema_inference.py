@@ -84,7 +84,7 @@ class DetectType:
         return "STRING"
 
 
-    def __infer_value_type(self, value, index, schema):        
+    def __infer_value_type(self, value, index, schema):     
         
         if value not in schema[index]["values"].keys():
             
@@ -152,7 +152,7 @@ class Parallel:
 
 class CsvSchemaInference:
     
-    def __init__(self, portion = 0.5, max_length = 100, acc = 0.7, seed= 1, header= True, sep=";", conditions = {}):
+    def __init__(self, portion = 0.5, max_length = 1000, acc = 0.7, seed= 1, header= True, sep=";", conditions = {}):
         self.portion = portion
         self.seed = seed
         self.header = header
@@ -202,6 +202,7 @@ class CsvSchemaInference:
 
                 v_dict = schemas[s_inx][c_inx]
 
+
                 if v_dict['nullable']:
                     self.__schema[c_inx]['nullable'] = True
 
@@ -221,16 +222,22 @@ class CsvSchemaInference:
     def check_condition(self, _types, acc):
 
         try:
-            _type = max({k: v for k, v in _types.items() if v >= (acc * 100)}.items(), 
+            _type = max({k: v for k, v in _types.items() if v >= (acc * 100)}.items(),
             key=operator.itemgetter(1))[0]
+
+            if _type in self.conditions:
+                if self.conditions[_type] in _types:
+                    _type = self.conditions[_type]
+
         except ValueError:
-            _type = "STRING"
-        
 
-        if _type in self.conditions:
-            if self.conditions[_type] in _types:
-                _type = self.conditions[_type]
-
+            if "STRING" in _types or len(_types) > 2:
+                _type = "STRING"
+            else:
+                if {"INTEGER", "FLOAT"}.issubset(_types):
+                    _type = "FLOAT"
+                else:
+                    _type = "STRING"                
         
         return _type
 
@@ -254,8 +261,8 @@ class CsvSchemaInference:
 
             for ft in _types:                
                 _types[ft] = (_types[ft] * 100) / t
-                
-                        
+
+
             _type = self.check_condition(_types, acc)
 
 
