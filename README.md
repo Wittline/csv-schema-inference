@@ -27,9 +27,9 @@ pip install csv-schema-inference
 
     Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/
     Collecting csv-schema-inference
-      Downloading csv_schema_inference-0.0.3-py3-none-any.whl (5.2 kB)
+      Downloading csv_schema_inference-0.0.6-py3-none-any.whl (5.2 kB)
     Installing collected packages: csv-schema-inference
-    Successfully installed csv-schema-inference-0.0.3
+    Successfully installed csv-schema-inference-0.0.6
 
 </div>
 
@@ -58,7 +58,9 @@ from csv_schema_inference import csv_schema_inference
 <div class="cell code" data-execution_count="3" id="MxqPQHl4t03W">
 
 ``` python
-csv_infer = csv_schema_inference.CsvSchemaInference(portion=0.7, max_length=100, seed=2, header=True, sep=",")
+#if the inferred data type is INTEGER and there is a presence of FLOAT on the results , then the result will be FLOAT
+conditions = {"INTEGER":"FLOAT"}
+csv_infer = csv_schema_inference.CsvSchemaInference(portion=0.9, max_length=100, acc = 0.8, seed=2, header=True, sep=",", conditions = conditions)
 pathfile = "/content/data.csv"
 ```
 
