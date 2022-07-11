@@ -152,14 +152,26 @@ class Parallel:
 
 class CsvSchemaInference:
     
-    def __init__(self, portion = 0.5, max_length = 100, acc = 0.7, seed= 1, header= True, sep=";"):
+    def __init__(self, portion = 0.5, max_length = 100, acc = 0.7, seed= 1, header= True, sep=";", conditions = {}):
         self.portion = portion
         self.seed = seed
         self.header = header
         self.sep = sep
         self.accuracy = acc
         self.__schema = {}
-        self.max_length = max_length        
+        self.max_length = max_length
+        self.data_types = {"STRING", "INTEGER", "FLOAT", "DATETIME", "DATE", "TIME", "TIMESTAMP", "BOOLEAN"}
+
+        if isinstance(conditions,dict):
+
+            if conditions:
+                for k, v in conditions.items():
+                    if k not in self.data_types or v not in self.data_types:
+                        raise ValueError('Keys and values in conditions must be valid data types')
+        
+
+        self.conditions = conditions
+
         
   
 
@@ -182,7 +194,7 @@ class CsvSchemaInference:
         return file_size // (len(buffer) // buffer.count(b'\n'))
 
     
-    def __build_schema(self, schemas):
+    def __merge_schemas(self, schemas):
 
         for c_inx in self.__schema:
 
@@ -203,6 +215,26 @@ class CsvSchemaInference:
                                     }
                     else:
                         self.__schema[c_inx]['values'][k]['cnt'] += v_dict['values'][k]['cnt']
+
+
+
+    def check_condition(self, _types, acc):
+
+        try:
+            _type = max({k: v for k, v in _types.items() if v >= (acc * 100)}.items(), 
+            key=operator.itemgetter(1))[0]
+        except ValueError:
+            _type = "STRING"
+        
+
+        if _type in self.conditions:
+            if self.conditions[_type] in _types:
+                _type = self.conditions[_type]
+
+        
+        return _type
+
+
     
 
 
@@ -220,16 +252,11 @@ class CsvSchemaInference:
                 else:
                     _types[value['_type']] += value['cnt']
 
-            for ft in _types:
-                p = (_types[ft] * 100) / t
-                _types[ft] = p
-            
-
-            try:
-                _type = max({k: v for k, v in _types.items() if v >= (acc * 100)}.items(), 
-                            key=operator.itemgetter(1))[0]
-            except ValueError:
-                _type = "STRING"
+            for ft in _types:                
+                _types[ft] = (_types[ft] * 100) / t
+                
+                        
+            _type = self.check_condition(_types, acc)
 
 
             self.__schema[c]['approximate_type'] = _type
@@ -335,7 +362,7 @@ class CsvSchemaInference:
                                       chunk_size = None)
 
                 #Joining schemas results
-                self.__build_schema(schemas)           
+                self.__merge_schemas(schemas)
 
                 #Approximate data types
                 return self.__approximate_types(acc = self.accuracy)
