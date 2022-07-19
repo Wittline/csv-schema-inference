@@ -139,7 +139,12 @@ class Parallel:
         
     def parallel(self, records, obj,  d_schema):
         
+
+
         cpus = (mp.cpu_count() - 2)
+
+        if cpus <= 0:
+            cpus = mp.cpu_count()
         
         chunk_size = len(records) / cpus
 
