@@ -17,7 +17,7 @@ A tool to automatically infer columns data types in .csv files
 
 </div>
 
-<div class="cell code" data-execution_count="1" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="NW7FOsRhtptl" data-outputId="686e0438-b703-441d-a956-efa8c5876570">
+<div class="cell code" data-execution_count="5" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="NW7FOsRhtptl" data-outputId="2ad79008-9ec3-44e7-8e64-f990533c1fdc">
 
 ``` python
 pip install csv-schema-inference
@@ -27,9 +27,9 @@ pip install csv-schema-inference
 
     Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/
     Collecting csv-schema-inference
-      Downloading csv_schema_inference-0.0.6-py3-none-any.whl (5.2 kB)
+      Downloading csv_schema_inference-0.0.9-py3-none-any.whl (7.3 kB)
     Installing collected packages: csv-schema-inference
-    Successfully installed csv-schema-inference-0.0.6
+    Successfully installed csv-schema-inference-0.0.9
 
 </div>
 
@@ -41,7 +41,7 @@ pip install csv-schema-inference
 
 </div>
 
-<div class="cell code" data-execution_count="2" id="ZCe2cOfJtxbB">
+<div class="cell code" data-execution_count="6" id="ZCe2cOfJtxbB">
 
 ``` python
 from csv_schema_inference import csv_schema_inference
@@ -55,13 +55,15 @@ from csv_schema_inference import csv_schema_inference
 
 </div>
 
-<div class="cell code" data-execution_count="3" id="MxqPQHl4t03W">
+<div class="cell code" data-execution_count="7" id="MxqPQHl4t03W">
 
 ``` python
+
 #if the inferred data type is INTEGER and there is a presence of FLOAT on the results , then the result will be FLOAT
 conditions = {"INTEGER":"FLOAT"}
-csv_infer = csv_schema_inference.CsvSchemaInference(portion=0.9, max_length=100, acc = 0.8, seed=2, header=True, sep=",", conditions = conditions)
-pathfile = "/content/data.csv"
+
+csv_infer = csv_schema_inference.CsvSchemaInference(portion=0.9, max_length=100, batch_size = 200000, acc = 0.8, seed=2, header=True, sep=",", conditions = conditions)
+pathfile = "/content/file__500k.csv"
 ```
 
 </div>
@@ -72,7 +74,7 @@ pathfile = "/content/data.csv"
 
 </div>
 
-<div class="cell code" data-execution_count="4" id="Ta4HiDbDwuXO">
+<div class="cell code" data-execution_count="8" id="Ta4HiDbDwuXO">
 
 ``` python
 aprox_schema = csv_infer.run_inference(pathfile)
@@ -86,7 +88,7 @@ aprox_schema = csv_infer.run_inference(pathfile)
 
 </div>
 
-<div class="cell code" data-execution_count="5" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="lxUwb3hKwsKZ" data-outputId="bdfb0213-456e-46b4-c39c-d45bb24dfff6">
+<div class="cell code" data-execution_count="9" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="lxUwb3hKwsKZ" data-outputId="d269d7d9-ea0b-490d-d83f-353b8548b179">
 
 ``` python
 csv_infer.pretty(aprox_schema)
@@ -96,74 +98,151 @@ csv_infer.pretty(aprox_schema)
 
     0
     	name
-    		key_1
+    		id
     	type
-    		STRING
+    		INTEGER
     	nullable
     		False
     1
     	name
-    		date_2
+    		full_name
     	type
-    		DATE
+    		STRING
     	nullable
-    		False
+    		True
     2
     	name
-    		cont_3
+    		age
     	type
-    		FLOAT
+    		INTEGER
     	nullable
     		False
     3
     	name
-    		cont_4
+    		city
     	type
-    		FLOAT
+    		STRING
     	nullable
-    		False
+    		True
     4
     	name
-    		disc_5
+    		weight
     	type
-    		INTEGER
+    		FLOAT
     	nullable
     		False
     5
     	name
-    		disc_6
+    		height
     	type
-    		INTEGER
+    		FLOAT
     	nullable
-    		True
+    		False
     6
     	name
-    		cat_7
+    		isActive
     	type
-    		STRING
+    		BOOLEAN
     	nullable
     		False
     7
     	name
-    		cat_8
+    		col_int1
     	type
-    		STRING
+    		INTEGER
     	nullable
     		False
     8
     	name
-    		cont_9
+    		col_int2
     	type
-    		FLOAT
+    		INTEGER
     	nullable
     		False
     9
     	name
-    		cont_10
+    		col_int3
+    	type
+    		INTEGER
+    	nullable
+    		False
+    10
+    	name
+    		col_float1
     	type
     		FLOAT
     	nullable
-    		True
+    		False
+    11
+    	name
+    		col_float2
+    	type
+    		FLOAT
+    	nullable
+    		False
+    12
+    	name
+    		col_float3
+    	type
+    		FLOAT
+    	nullable
+    		False
+    13
+    	name
+    		col_float4
+    	type
+    		FLOAT
+    	nullable
+    		False
+    14
+    	name
+    		col_float5
+    	type
+    		FLOAT
+    	nullable
+    		False
+    15
+    	name
+    		col_float6
+    	type
+    		FLOAT
+    	nullable
+    		False
+    16
+    	name
+    		col_float7
+    	type
+    		FLOAT
+    	nullable
+    		False
+    17
+    	name
+    		col_float8
+    	type
+    		FLOAT
+    	nullable
+    		False
+    18
+    	name
+    		col_float9
+    	type
+    		FLOAT
+    	nullable
+    		False
+    19
+    	name
+    		col_float10
+    	type
+    		FLOAT
+    	nullable
+    		False
+    20
+    	name
+    		test_column
+    	type
+    		FLOAT
+    	nullable
+    		False
 
 </div>
 
@@ -175,118 +254,29 @@ csv_infer.pretty(aprox_schema)
 
 </div>
 
-<div class="cell code" data-execution_count="12" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="_fxgKtFDt3aH" data-outputId="2f78136f-1351-41c0-bf9a-9f700371dd2d">
+<div class="cell code" data-execution_count="10" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="_fxgKtFDt3aH" data-outputId="0d09760a-a6b8-49f3-9230-61f8e61510d6">
 
 ``` python
-result = csv_infer.get_schema_columns(columns = {"disc_6"})
+result = csv_infer.get_schema_columns(columns = {"test_column"})
 csv_infer.pretty(result)
 ```
 
 <div class="output stream stdout">
 
-    5
+    20
     	_name
-    		disc_6
-    	values
-    		na
-    			cnt
-    				70755
-    			_type
-    				STRING
-    		14
-    			cnt
-    				34732
-    			_type
-    				INTEGER
-    		17
-    			cnt
-    				35237
-    			_type
-    				INTEGER
-    		12
-    			cnt
-    				35408
-    			_type
-    				INTEGER
-    		10
-    			cnt
-    				35174
-    			_type
-    				INTEGER
-    		4
-    			cnt
-    				34924
-    			_type
-    				INTEGER
-    		8
-    			cnt
-    				34861
-    			_type
-    				INTEGER
-    		7
-    			cnt
-    				35270
-    			_type
-    				INTEGER
-    		13
-    			cnt
-    				35274
-    			_type
-    				INTEGER
-    		5
-    			cnt
-    				35024
-    			_type
-    				INTEGER
-    		0
-    			cnt
-    				35325
-    			_type
-    				INTEGER
-    		2
-    			cnt
-    				35265
-    			_type
-    				INTEGER
-    		16
-    			cnt
-    				35250
-    			_type
-    				INTEGER
-    		6
-    			cnt
-    				34961
-    			_type
-    				INTEGER
-    		15
-    			cnt
-    				35132
-    			_type
-    				INTEGER
-    		11
-    			cnt
-    				35250
-    			_type
-    				INTEGER
-    		3
-    			cnt
-    				35063
-    			_type
-    				INTEGER
-    		1
-    			cnt
-    				35237
-    			_type
-    				INTEGER
-    		9
-    			cnt
-    				35078
-    			_type
-    				INTEGER
-    	nullable
-    		True
-    	approximate_type
+    		test_column
+    	types_found
     		INTEGER
+    			cnt
+    				406130
+    		FLOAT
+    			cnt
+    				50964
+    	nullable
+    		False
+    	type
+    		FLOAT
 
 </div>
 
@@ -298,29 +288,30 @@ csv_infer.pretty(result)
 
 </div>
 
-<div class="cell code" data-execution_count="13" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="d93OWWDMt5Qy" data-outputId="6b7e8aed-bbbe-4f5e-f2ea-d1d3e8d4606f">
+<div class="cell code" data-execution_count="11" data-colab="{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}" id="d93OWWDMt5Qy" data-outputId="db73203d-9dcb-49de-dd00-8287ae9ca7d6">
 
 ``` python
-result = csv_infer.explore_schema_column(column = "disc_6")
+result = csv_infer.explore_schema_column(column = "test_column")
 csv_infer.pretty(result)
 ```
 
 <div class="output stream stdout">
 
-    5
+    20
     	name
-    		disc_6
-    	types
-    		STRING
-    			10.061573902903785
+    		test_column
+    	types_found
     		INTEGER
-    			89.93842609709621
+    			88.85043339006856
+    		FLOAT
+    			11.149566609931437
     	nullable
-    		True
+    		False
 
 </div>
 
 </div>
+
 
 ## Contributing and Feedback
 Any ideas or feedback about this repository?. Help me to improve it.
