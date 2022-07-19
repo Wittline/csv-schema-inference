@@ -1,3 +1,4 @@
+from logging import exception
 import mmap
 import os
 import random
@@ -84,9 +85,9 @@ class DetectType:
         return "STRING"
 
 
-    def __infer_value_type(self, value, index, schema, values): 
+    def __infer_value_type(self, value, index, schema, values_type): 
 
-        if value not in values.keys():
+        if value not in values_type.keys():
             
             local_type = self.__get_local_type(value)
             
@@ -104,50 +105,32 @@ class DetectType:
             else:
                 _type = local_type
 
-            values[value] = _type            
-            schema[index]["types_found"][values[value]] = { "cnt": 1}
+            values_type[value] = _type
 
+            if values_type[value] not in schema[index]["types_found"].keys():
+                schema[index]["types_found"][values_type[value]] = { "cnt": 1}
+            else:
+                schema[index]["types_found"][values_type[value]]["cnt"] += 1
         else:
-            schema[index]["types_found"][values[value]]["cnt"] += 1
+            if values_type[value] not in schema[index]["types_found"].keys():
+                schema[index]["types_found"][values_type[value]] = { "cnt": 1}
+            else:
+                schema[index]["types_found"][values_type[value]]["cnt"] += 1
         
-        # if value not in schema[index]["values"].keys():
-            
-        #     local_type = self.__get_local_type(value)
-            
-        #     if local_type == 'STRING':
-                
-        #         if value in {"", "na", "NA", "null", "NULL"}:
-        #             schema[index]["nullable"] = True
-        #             _type = "STRING"
-        #         elif value in {"true", "false", "TRUE", "FALSE", "True", "False"}:
-        #             _type = "BOOLEAN"                
-        #         elif len(value) < 21:
-        #             _type = self.__get_date_type(value)
-        #         else:
-        #             _type = local_type
-        #     else:
-        #         _type = local_type
-            
-        #     schema[index]["values"][value] = { "cnt": 1,"_type": _type}
-        
-        # else:
-        #     schema[index]["values"][value]["cnt"] += 1
-            
 
     def execute(self, records, schema):
-
-        values = {}
+        values_type = {}
         for record in records:
             values = record.rstrip().split(self.sep)              
-            for index, value in enumerate(values):                
-                self.__infer_value_type(value[0:self.max_length], index, schema, values)
+            for index, value in enumerate(values):
+                self.__infer_value_type(value[0:self.max_length], index, schema, values_type)
 
 
 class Parallel:
 
     def __init__(self):
         pass
-    
+
     
     def execute(self, records, x, obj, d_schema):
         obj.execute(records, d_schema)
@@ -165,6 +148,7 @@ class Parallel:
             chunk_size = 1
         else:
             chunk_size = round(chunk_size)
+        
 
 
         pool = mp.Pool(processes=cpus)
@@ -208,7 +192,7 @@ class CsvSchemaInference:
         for i in range(0, len(header)):
             self.__schema[i] = {
                 "_name": header[i].replace('"', ''),
-                "types_found":{
+                "types_found":{                    
                 },
                 "nullable":False,
                 "type":""
@@ -231,6 +215,7 @@ class CsvSchemaInference:
 
                 if _v['nullable']:
                     self.__schema[c_inx]['nullable'] = True
+
 
                 for k in _v['types_found']:
 
@@ -375,16 +360,15 @@ class CsvSchemaInference:
                 no_lines = self.__estimate_count(filename, map_file) - less_header
                 portion = int(no_lines * self.portion)
                 map_file.seek(0)
-
                 
                 if self.header:
                     self.__set_header(map_file.readline().decode("ISO-8859-1"))
 
-                dtype = DetectType(self.max_length, self.sep)
-
                 lines = []
                 schemas = []
                 batch_count = 0
+
+                dtype = DetectType(self.max_length, self.sep) 
 
                 
                 while batch_count < portion:
@@ -393,39 +377,29 @@ class CsvSchemaInference:
                     lines.append(map_file.readline().decode("ISO-8859-1"))
                     
                     if batch_count % self.batch_size == 0:
+
                         prl = Parallel()
-                        schemas.append(prl.parallel(records = lines, obj=dtype, d_schema = self.__schema))
+                        schemas_result = prl.parallel(records = lines, obj=dtype, d_schema = self.__schema)
+
+                        for schema in schemas_result:
+                            schemas.append(schema)
 
                         lines = []
 
                 if len(lines) > 0:
 
-                    prl = Parallel()                                        
-                    schemas.append(prl.parallel(records = lines,obj=dtype, d_schema = self.__schema))
+                    prl = Parallel()                                      
+                    schemas_result = prl.parallel(records = lines,obj=dtype, d_schema = self.__schema)
+
+                    for schema in schemas_result:
+                        schemas.append(schema)                    
+                    
                     del lines
                     del batch_count
 
 
                 #Joining schemas results
-                self.__merge_schemas([schema[0] for schema in schemas])
-                del schemas
+                self.__merge_schemas(schemas)
 
         #Approximate data types
         return self.__approximate_types(acc = self.accuracy)
-
-
-import timeit as tiempo
-
-if __name__ == '__main__':
-
-    inicio = tiempo.default_timer()
-    conditions = {"INTEGER":"FLOAT"}
-    pathfile = "file__8m.csv"
-
-    csv_infer = CsvSchemaInference(portion=0.8, max_length=100, batch_size = 1000000, acc = 0.8, seed=2, header=True, sep=",", conditions = conditions)   
-
-    aprox_schema = csv_infer.run_inference(pathfile)
-
-    fin = tiempo.default_timer()
-                
-    print("total time: " + format(fin-inicio, '.8f'))
