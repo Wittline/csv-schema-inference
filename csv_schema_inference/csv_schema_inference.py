@@ -84,9 +84,9 @@ class DetectType:
         return "STRING"
 
 
-    def __infer_value_type(self, value, index, schema):     
-        
-        if value not in schema[index]["values"].keys():
+    def __infer_value_type(self, value, index, schema, values): 
+
+        if value not in values.keys():
             
             local_type = self.__get_local_type(value)
             
@@ -103,21 +103,44 @@ class DetectType:
                     _type = local_type
             else:
                 _type = local_type
-            
-            schema[index]["values"][value] = { "cnt": 1,"_type": _type}
-        
+
+            values[value] = _type            
+            schema[index]["types_found"][values[value]] = { "cnt": 1}
+
         else:
-            schema[index]["values"][value]["cnt"] += 1
+            schema[index]["types_found"][values[value]]["cnt"] += 1
+        
+        # if value not in schema[index]["values"].keys():
+            
+        #     local_type = self.__get_local_type(value)
+            
+        #     if local_type == 'STRING':
+                
+        #         if value in {"", "na", "NA", "null", "NULL"}:
+        #             schema[index]["nullable"] = True
+        #             _type = "STRING"
+        #         elif value in {"true", "false", "TRUE", "FALSE", "True", "False"}:
+        #             _type = "BOOLEAN"                
+        #         elif len(value) < 21:
+        #             _type = self.__get_date_type(value)
+        #         else:
+        #             _type = local_type
+        #     else:
+        #         _type = local_type
+            
+        #     schema[index]["values"][value] = { "cnt": 1,"_type": _type}
+        
+        # else:
+        #     schema[index]["values"][value]["cnt"] += 1
             
 
     def execute(self, records, schema):
 
+        values = {}
         for record in records:
             values = record.rstrip().split(self.sep)              
-            for index, value in enumerate(values):
-                self.__infer_value_type(value[0:self.max_length], index, schema)
-        
-        return schema
+            for index, value in enumerate(values):                
+                self.__infer_value_type(value[0:self.max_length], index, schema, values)
 
 
 class Parallel:
@@ -127,7 +150,8 @@ class Parallel:
     
     
     def execute(self, records, x, obj, d_schema):
-        return obj.execute(records, d_schema)
+        obj.execute(records, d_schema)
+        return d_schema
 
         
     def parallel(self, records, obj,  d_schema):
@@ -149,7 +173,7 @@ class Parallel:
         pool.close()
         pool.join()
 
-        return [p.get() for p in results]            
+        return [p.get() for p in results]
 
 
 class CsvSchemaInference:
@@ -184,7 +208,7 @@ class CsvSchemaInference:
         for i in range(0, len(header)):
             self.__schema[i] = {
                 "_name": header[i].replace('"', ''),
-                "values":{
+                "types_found":{
                 },
                 "nullable":False,
                 "type":""
@@ -203,21 +227,20 @@ class CsvSchemaInference:
 
             for s_inx in range(0, len(schemas)):
 
-                v_dict = schemas[s_inx][c_inx]
+                _v = schemas[s_inx][c_inx]
 
-                if v_dict['nullable']:
+                if _v['nullable']:
                     self.__schema[c_inx]['nullable'] = True
 
-                for k in v_dict['values']:
+                for k in _v['types_found']:
 
-                    if k not in self.__schema[c_inx]['values']:
+                    if k not in self.__schema[c_inx]['types_found'].keys():
 
-                        self.__schema[c_inx]['values'][k] = { 
-                                    "cnt": v_dict['values'][k]['cnt'],
-                                    "_type": v_dict['values'][k]['_type']
+                        self.__schema[c_inx]['types_found'][k] = { 
+                                    "cnt": _v['types_found'][k]['cnt']
                                     }
                     else:
-                        self.__schema[c_inx]['values'][k]['cnt'] += v_dict['values'][k]['cnt']
+                        self.__schema[c_inx]['types_found'][k]['cnt'] += _v['types_found'][k]['cnt']
 
 
 
@@ -249,17 +272,16 @@ class CsvSchemaInference:
 
     def __approximate_types(self, acc = 0.5):
 
-        result = {}        
+        result = {}
         for c in self.__schema:
             _types = {}
             t = 0
-            for v in self.__schema[c]['values']:
-                value = self.__schema[c]['values'][v]
-                t += value['cnt']
-                if value['_type'] not in _types:
-                    _types[value['_type']] = value['cnt']
-                else:
-                    _types[value['_type']] += value['cnt']
+            for v in self.__schema[c]['types_found']:
+                t += self.__schema[c]['types_found'][v]['cnt']
+                if v not in _types.keys():
+                    _types[v] = self.__schema[c]['types_found'][v]['cnt']
+                else:                    
+                    _types[v] += self.__schema[c]['types_found'][v]['cnt']
 
             for ft in _types:                
                 _types[ft] = (_types[ft] * 100) / t
@@ -298,7 +320,7 @@ class CsvSchemaInference:
             if self.__schema[c]["_name"] in columns:
                 result[c] = {
                     "_name": self.__schema[c]["_name"],
-                    "values":self.__schema[c]["values"],
+                    "types_found":self.__schema[c]["types_found"],
                     "nullable":self.__schema[c]["nullable"],
                     "type":self.__schema[c]["type"]
                 }
@@ -316,22 +338,20 @@ class CsvSchemaInference:
 
                 _types = {}
                 t = 0
-                for v in self.__schema[c]['values']:
-                    value = self.__schema[c]['values'][v]
-                    t += value['cnt']
-                    if value['_type'] not in _types:
-                        _types[value['_type']] = value['cnt']
+                for v in self.__schema[c]['types_found']:
+                    t += self.__schema[c]['types_found'][v]['cnt']
+
+                    if v not in _types.keys():
+                        _types[v] = self.__schema[c]['types_found'][v]['cnt']
                     else:
-                        _types[value['_type']] += value['cnt']
+                        _types[v] += self.__schema[c]['types_found'][v]['cnt']
 
                 for ft in _types:
-                    p = (_types[ft] * 100) / t
-                    _types[ft] = p
+                     _types[ft] = (_types[ft] * 100) / t
 
-                _types
                 result[c] = {
                     "name" : self.__schema[c]['_name'],
-                    "types": _types,
+                    "types_found": _types,
                     "nullable": self.__schema[c]['nullable']
                 }
                 
