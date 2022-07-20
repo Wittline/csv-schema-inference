@@ -1,7 +1,5 @@
-from logging import exception
 import mmap
 import os
-import random
 import multiprocessing as mp
 import datetime as dt
 import operator
