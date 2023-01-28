@@ -3,7 +3,10 @@ import os
 import multiprocessing as mp
 import datetime as dt
 import operator
-
+# backend can be:
+# - multiprocessing
+# - threading
+backend = "multiprocessing"
 
 
 class DetectType:
@@ -135,32 +138,23 @@ class Parallel:
         return d_schema
 
         
-    def parallel(self, records, obj,  d_schema):
-        
-
-
+    def parallel(self, records, obj,  d_schema): 
         cpus = (mp.cpu_count() - 2)
-
         if cpus <= 0:
             cpus = mp.cpu_count()
-        
         chunk_size = len(records) / cpus
-
         if chunk_size < 1:
             cpus = int(chunk_size * 10)
             chunk_size = 1
         else:
             chunk_size = round(chunk_size)
-        
 
+        from joblib import Parallel, delayed
 
-        pool = mp.Pool(processes=cpus)
-        
-        results = [pool.apply_async(self.execute, args=(records[x:x+chunk_size], x, obj, d_schema)) for x in range(0, len(records), chunk_size)]
-        pool.close()
-        pool.join()
-
-        return [p.get() for p in results]
+        # num_workers can be set based on a variable or command line argument
+        num_workers = cpus
+        results = Parallel(n_jobs=num_workers, backend=backend)(delayed(self.execute)(records[x:x+chunk_size], x, obj, d_schema) for x in range(0, len(records), chunk_size))
+        return results
 
 
 class CsvSchemaInference:
